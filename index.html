@@ -1,0 +1,322 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sorriso Perfeito | Clínica Odontológica</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        scroll-behavior: smooth;
+      }
+      @keyframes bounce-slow {
+        0%, 100% { transform: translateY(-5%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); }
+        50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+      }
+      .animate-bounce-slow {
+        animation: bounce-slow 3s infinite;
+      }
+    </style>
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.0.0",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0",
+    "@google/genai": "https://esm.sh/@google/genai@1.3.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module">
+      import React, { useState, useEffect, useRef, useMemo } from 'react';
+      import ReactDOM from 'react-dom/client';
+      import { 
+        Sparkles, Stethoscope, ShieldCheck, Smile, Clock, Award, 
+        HeartPulse, Syringe, Menu, X, Phone, MapPin, Instagram, 
+        Facebook, Calendar, CheckCircle2, Send, Mail, User, Bot, 
+        Loader2, Star 
+      } from 'lucide-react';
+      import { GoogleGenAI } from "@google/genai";
+
+      // --- CONSTANTS & TYPES ---
+      const SERVICES = [
+        { id: '1', title: 'Clareamento Dental', description: 'Transforme seu sorriso com nossas técnicas avançadas de clareamento a laser e caseiro.', icon: Sparkles },
+        { id: '2', title: 'Implantes Dentários', description: 'Recupere sua confiança e funcionalidade com implantes de alta durabilidade e estética natural.', icon: ShieldCheck },
+        { id: '3', title: 'Ortodontia Moderna', description: 'Aparelhos invisíveis e convencionais para alinhar seu sorriso de forma rápida e confortável.', icon: Smile },
+        { id: '4', title: 'Odontopediatria', description: 'Cuidado especializado e lúdico para garantir a saúde bucal das crianças desde cedo.', icon: HeartPulse },
+        { id: '5', title: 'Cirurgia Oral', description: 'Procedimentos seguros realizados por especialistas experientes em ambiente esterilizado.', icon: Syringe },
+        { id: '6', title: 'Check-up Preventivo', description: 'Limpeza profunda e diagnóstico precoce para evitar problemas futuros e manter a saúde em dia.', icon: Stethoscope }
+      ];
+
+      const TESTIMONIALS = [
+        { id: '1', name: 'Ana Silva', text: 'A melhor experiência que já tive em um dentista. Atendimento impecável e tecnologia de ponta!', rating: 5, image: 'https://picsum.photos/seed/ana/100/100' },
+        { id: '2', name: 'Ricardo Lima', text: 'Fiz meus implantes aqui e o resultado ficou super natural. Recomendo muito a equipe.', rating: 5, image: 'https://picsum.photos/seed/ricardo/100/100' },
+        { id: '3', name: 'Juliana Costa', text: 'Minha filha adora o atendimento infantil. Não tem mais medo de ir ao dentista!', rating: 5, image: 'https://picsum.photos/seed/juliana/100/100' }
+      ];
+
+      // --- SERVICES ---
+      const SYSTEM_INSTRUCTION = `
+        Você é a "SorriaBot", uma assistente virtual amigável e profissional da Clínica Odontológica Sorriso Perfeito.
+        Seu objetivo é ajudar pacientes com dúvidas comuns sobre odontologia, explicar procedimentos simples e fornecer dicas de cuidados.
+        Regras: Educada, sem diagnósticos definitivos, emergências devem ser encaminhadas para consulta real, linguagem clara.
+      `;
+
+      class GeminiService {
+        constructor() {
+          this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+        }
+        async chat(message, history) {
+          try {
+            const contents = history.map(h => ({
+              role: h.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: h.content }]
+            }));
+            contents.push({ role: 'user', parts: [{ text: message }] });
+            const response = await this.ai.models.generateContent({
+              model: 'gemini-3-flash-preview',
+              contents: contents,
+              config: { systemInstruction: SYSTEM_INSTRUCTION, temperature: 0.7 },
+            });
+            return response.text || "Desculpe, não consegui processar sua pergunta.";
+          } catch (error) {
+            console.error(error);
+            return "Houve um erro técnico. Por favor, tente novamente mais tarde.";
+          }
+        }
+      }
+      const geminiService = new GeminiService();
+
+      // --- COMPONENTS ---
+
+      const Layout = ({ children }) => {
+        const [isMenuOpen, setIsMenuOpen] = useState(false);
+        const [scrolled, setScrolled] = useState(false);
+
+        useEffect(() => {
+          const handleScroll = () => setScrolled(window.scrollY > 20);
+          window.addEventListener('scroll', handleScroll);
+          return () => window.removeEventListener('scroll', handleScroll);
+        }, []);
+
+        const navItems = [
+          { name: 'Início', href: '#home' },
+          { name: 'Serviços', href: '#services' },
+          { name: 'Sobre', href: '#about' },
+          { name: 'Depoimentos', href: '#testimonials' },
+          { name: 'Contato', href: '#contact' },
+        ];
+
+        return (
+          <div className="min-h-screen bg-slate-50 text-slate-900">
+            <nav className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/90 backdrop-blur-md shadow-md py-3' : 'bg-transparent py-5'}`}>
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center">
+                    <span className="text-2xl font-bold text-blue-600 flex items-center">
+                      <span className="bg-blue-600 text-white p-1 rounded-lg mr-2">S</span>
+                      Sorriso Perfeito
+                    </span>
+                  </div>
+                  <div className="hidden md:flex items-center space-x-8">
+                    {navItems.map((item) => (
+                      <a key={item.name} href={item.href} className="text-sm font-medium hover:text-blue-600 transition-colors">{item.name}</a>
+                    ))}
+                    <a href="#contact" className="bg-blue-600 text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-blue-700 transition-all">Agendar Agora</a>
+                  </div>
+                  <div className="md:hidden flex items-center">
+                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-slate-600">
+                      {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {isMenuOpen && (
+                <div className="md:hidden bg-white border-b p-4 space-y-2">
+                  {navItems.map((item) => (
+                    <a key={item.name} href={item.href} className="block py-2 text-slate-600" onClick={() => setIsMenuOpen(false)}>{item.name}</a>
+                  ))}
+                </div>
+              )}
+            </nav>
+            <main>{children}</main>
+            <footer className="bg-slate-900 text-slate-300 py-12 px-4">
+              <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+                <div className="space-y-4">
+                  <h3 className="text-white text-xl font-bold">Sorriso Perfeito</h3>
+                  <p className="text-sm">Cuidando do seu sorriso com excelência e tecnologia.</p>
+                  <div className="flex space-x-4"><Instagram size={20} /><Facebook size={20} /></div>
+                </div>
+                <div>
+                  <h4 className="text-white font-semibold mb-6">Contato</h4>
+                  <ul className="space-y-3 text-sm">
+                    <li className="flex items-center gap-2"><Phone size={16} /> (11) 9999-9999</li>
+                    <li className="flex items-center gap-2"><MapPin size={16} /> Av. Paulista, 1000 - SP</li>
+                  </ul>
+                </div>
+              </div>
+            </footer>
+          </div>
+        );
+      };
+
+      const Hero = () => (
+        <section id="home" className="relative min-h-[90vh] flex items-center pt-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-8">
+              <h1 className="text-5xl lg:text-7xl font-extrabold text-slate-900 leading-tight">
+                Sua saúde bucal em <span className="text-blue-600">primeiro lugar.</span>
+              </h1>
+              <p className="text-lg text-slate-600 max-w-lg">Oferecemos cuidados odontológicos de alta qualidade com tecnologia de ponta.</p>
+              <div className="flex gap-4">
+                <a href="#contact" className="bg-blue-600 text-white px-8 py-4 rounded-full font-bold shadow-lg">Agendar Avaliação</a>
+              </div>
+            </div>
+            <div className="relative">
+              <img src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?q=80&w=2070&auto=format&fit=crop" className="rounded-2xl shadow-2xl" alt="Dentista" />
+            </div>
+          </div>
+        </section>
+      );
+
+      const Services = () => (
+        <section id="services" className="py-24 bg-slate-50 text-center">
+          <div className="max-w-7xl mx-auto px-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-16">Nossos Tratamentos</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {SERVICES.map((s) => (
+                <div key={s.id} className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 hover:-translate-y-1 transition-all">
+                  <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-6">
+                    <s.icon size={28} />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3">{s.title}</h3>
+                  <p className="text-slate-600 text-sm">{s.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+
+      const ChatBot = () => {
+        const [isOpen, setIsOpen] = useState(false);
+        const [messages, setMessages] = useState([{ role: 'assistant', content: 'Olá! Sou a SorriaBot. Como posso ajudar?' }]);
+        const [input, setInput] = useState('');
+        const [isLoading, setIsLoading] = useState(false);
+        const scrollRef = useRef(null);
+
+        useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, isLoading]);
+
+        const handleSend = async () => {
+          if (!input.trim() || isLoading) return;
+          const userMsg = input.trim();
+          setInput('');
+          setMessages(p => [...p, { role: 'user', content: userMsg }]);
+          setIsLoading(true);
+          const resp = await geminiService.chat(userMsg, messages);
+          setMessages(p => [...p, { role: 'assistant', content: resp }]);
+          setIsLoading(false);
+        };
+
+        return (
+          <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end">
+            {isOpen && (
+              <div className="w-[350px] h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border mb-4">
+                <div className="bg-blue-600 p-4 text-white flex justify-between items-center">
+                  <span className="font-bold flex items-center gap-2"><Bot size={20} /> SorriaBot</span>
+                  <button onClick={() => setIsOpen(false)}><X size={20} /></button>
+                </div>
+                <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+                  {messages.map((m, i) => (
+                    <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`p-3 rounded-xl max-w-[80%] text-sm ${m.role === 'user' ? 'bg-blue-600 text-white' : 'bg-white border'}`}>
+                        {m.content}
+                      </div>
+                    </div>
+                  ))}
+                  {isLoading && <div className="text-xs text-slate-400">Pensando...</div>}
+                </div>
+                <div className="p-4 border-t flex gap-2">
+                  <input value={input} onChange={e => setInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSend()} placeholder="Dúvidas?" className="flex-1 text-sm bg-slate-100 p-2 rounded-lg outline-none" />
+                  <button onClick={handleSend} className="bg-blue-600 text-white p-2 rounded-lg"><Send size={16} /></button>
+                </div>
+              </div>
+            )}
+            <button onClick={() => setIsOpen(!isOpen)} className="w-16 h-16 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center animate-bounce-slow">
+              {isOpen ? <X size={28} /> : <MessageCircleIcon size={28} />}
+            </button>
+          </div>
+        );
+      };
+
+      // Helper for missing icon in some react versions
+      const MessageCircleIcon = ({ size }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>;
+
+      const App = () => {
+        return (
+          <Layout>
+            <Hero />
+            <Services />
+            <section id="about" className="py-24 bg-white px-4">
+              <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+                <img src="https://images.unsplash.com/photo-1576091160550-2173dad99978?q=80&w=2070&auto=format&fit=crop" className="rounded-2xl" alt="About" />
+                <div className="space-y-6">
+                  <h2 className="text-3xl font-bold">Referência em Odontologia</h2>
+                  <p className="text-slate-600">Nossa missão é redefinir a experiência de ir ao dentista com conforto e segurança.</p>
+                  <div className="flex gap-4 items-center">
+                    <Award className="text-blue-600" />
+                    <span className="font-semibold">Profissionais Certificados</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section id="testimonials" className="py-24 bg-slate-50 text-center px-4">
+              <h2 className="text-3xl font-bold mb-16">O que nossos pacientes dizem</h2>
+              <div className="grid md:grid-cols-3 gap-8 max-w-7xl mx-auto">
+                {TESTIMONIALS.map(t => (
+                  <div key={t.id} className="bg-white p-8 rounded-2xl border shadow-sm">
+                    <div className="flex justify-center text-yellow-400 mb-4">
+                      {[...Array(t.rating)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
+                    </div>
+                    <p className="italic text-slate-600 mb-6">"{t.text}"</p>
+                    <p className="font-bold">{t.name}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+            <section id="contact" className="py-24 bg-white px-4">
+              <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12">
+                <div>
+                  <h2 className="text-3xl font-bold mb-6">Agende sua consulta</h2>
+                  <p className="mb-8">Preencha o formulário e entraremos em contato.</p>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3"><Phone className="text-blue-600" /> (11) 9999-9999</div>
+                    <div className="flex items-center gap-3"><Mail className="text-blue-600" /> contato@sorriso.com.br</div>
+                  </div>
+                </div>
+                <form className="space-y-4 bg-slate-50 p-8 rounded-2xl">
+                  <input placeholder="Seu Nome" className="w-full p-3 rounded-lg border" />
+                  <input placeholder="WhatsApp" className="w-full p-3 rounded-lg border" />
+                  <button className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold">Confirmar Solicitação</button>
+                </form>
+              </div>
+            </section>
+            <ChatBot />
+          </Layout>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
